@@ -31,6 +31,7 @@ class TestProxyInit:
         assert p.last_status == ""
         assert p.last_time == ""
         assert p.https is False
+        assert p.latency == 0.0
 
     def test_custom_values(self):
         p = Proxy(
@@ -67,7 +68,7 @@ class TestProxySerialization:
         p = Proxy("1.2.3.4:8080")
         d = p.to_dict
         expected_keys = {"proxy", "https", "fail_count", "region", "anonymous",
-                         "source", "check_count", "last_status", "last_time"}
+                         "source", "check_count", "last_status", "last_time", "latency"}
         assert set(d.keys()) == expected_keys
 
     def test_to_dict_values(self):

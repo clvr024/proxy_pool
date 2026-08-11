@@ -18,7 +18,7 @@ import json
 class Proxy(object):
 
     def __init__(self, proxy, fail_count=0, region="", anonymous="",
-                 source="", check_count=0, last_status="", last_time="", https=False):
+                 source="", check_count=0, last_status="", last_time="", https=False, latency=0.0):
         self._proxy = proxy
         self._fail_count = fail_count
         self._region = region
@@ -28,6 +28,7 @@ class Proxy(object):
         self._last_status = last_status
         self._last_time = last_time
         self._https = https
+        self._latency = latency
 
     @classmethod
     def createFromJson(cls, proxy_json):
@@ -40,7 +41,8 @@ class Proxy(object):
                    check_count=_dict.get("check_count", 0),
                    last_status=_dict.get("last_status", ""),
                    last_time=_dict.get("last_time", ""),
-                   https=_dict.get("https", False)
+                   https=_dict.get("https", False),
+                   latency=_dict.get("latency", 0.0)
                    )
 
     @property
@@ -89,6 +91,11 @@ class Proxy(object):
         return self._https
 
     @property
+    def latency(self):
+        """ 响应延迟 (秒) """
+        return self._latency
+
+    @property
     def to_dict(self):
         """ 属性字典 """
         return {"proxy": self.proxy,
@@ -99,7 +106,8 @@ class Proxy(object):
                 "source": self.source,
                 "check_count": self.check_count,
                 "last_status": self.last_status,
-                "last_time": self.last_time}
+                "last_time": self.last_time,
+                "latency": self.latency}
 
     @property
     def to_json(self):
@@ -129,6 +137,10 @@ class Proxy(object):
     @region.setter
     def region(self, value):
         self._region = value
+
+    @latency.setter
+    def latency(self, value):
+        self._latency = round(float(value), 2) if value is not None else 0.0
 
     def add_source(self, source_str):
         if source_str:

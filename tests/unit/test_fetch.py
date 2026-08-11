@@ -142,3 +142,23 @@ class TestThreadFetcher:
         assert "1.2.3.4:8080" in proxy_dict
         # source 应该包含两次 "test_fetcher"（add_source 去重，但只出现一次）
         assert "test_fetcher" in proxy_dict["1.2.3.4:8080"].source
+
+
+class TestFetcherHealth:
+
+    def setup_method(self):
+        fetch_mod.FetcherHealth.reset()
+
+    def test_record_success_and_failure(self):
+        fetcher_name = "test_source"
+        assert fetch_mod.FetcherHealth.is_circuit_open(fetcher_name) is False
+
+        fetch_mod.FetcherHealth.record_failure(fetcher_name)
+        fetch_mod.FetcherHealth.record_failure(fetcher_name)
+        assert fetch_mod.FetcherHealth.is_circuit_open(fetcher_name) is False
+
+        fetch_mod.FetcherHealth.record_failure(fetcher_name)
+        assert fetch_mod.FetcherHealth.is_circuit_open(fetcher_name) is True
+
+        fetch_mod.FetcherHealth.record_success(fetcher_name)
+        assert fetch_mod.FetcherHealth.is_circuit_open(fetcher_name) is False

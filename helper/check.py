@@ -14,6 +14,8 @@
 """
 __author__ = 'JHao'
 
+import time
+import ipaddress
 from util.six import Empty
 from threading import Thread
 from datetime import datetime
@@ -22,6 +24,9 @@ from handler.logHandler import LogHandler
 from helper.validator import ProxyValidator
 from handler.proxyHandler import ProxyHandler
 from handler.configHandler import ConfigHandler
+
+_REGION_CACHE = {}
+_CACHE_MAX_SIZE = 5000
 
 
 class DoValidator(object):
@@ -39,13 +44,16 @@ class DoValidator(object):
         Returns:
             Proxy Object
         """
+        start_time = time.time()
         http_r = cls.httpValidator(proxy)
+        elapsed = round(time.time() - start_time, 2)
         https_r = False if not http_r else cls.httpsValidator(proxy)
 
         proxy.check_count += 1
         proxy.last_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         proxy.last_status = True if http_r else False
         if http_r:
+            proxy.latency = elapsed
             if proxy.fail_count > 0:
                 proxy.fail_count -= 1
             proxy.https = True if https_r else False
@@ -77,13 +85,66 @@ class DoValidator(object):
         return True
 
     @classmethod
+    def clearRegionCache(cls):
+        _REGION_CACHE.clear()
+
+    @classmethod
     def regionGetter(cls, proxy):
+        raw_ip = proxy.proxy.split(':')[0]
+        if '@' in raw_ip:
+            raw_ip = raw_ip.split('@')[-1]
+
+        # 1. 检查私有/保留 IP
         try:
-            url = 'https://api.ip.sb/geoip/%s' % proxy.proxy.split(':')[0]
+            ip_obj = ipaddress.ip_address(raw_ip)
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                return 'INT'
+        except ValueError:
+            pass
+
+        # 2. 检查缓存
+        if raw_ip in _REGION_CACHE:
+            return _REGION_CACHE[raw_ip]
+
+        country_code = None
+
+        # 3. 主源 api.ip.sb
+        try:
+            url = 'https://api.ip.sb/geoip/%s' % raw_ip
             r = WebRequest().get(url=url, retry_time=1, timeout=2).json
-            return r.get('country_code')
-        except:
-            return 'error'
+            if isinstance(r, dict):
+                country_code = r.get('country_code')
+        except Exception:
+            pass
+
+        # 4. 降级源 1: ip-api.com
+        if not country_code:
+            try:
+                url = 'http://ip-api.com/json/%s?fields=countryCode' % raw_ip
+                r = WebRequest().get(url=url, retry_time=1, timeout=2).json
+                if isinstance(r, dict):
+                    country_code = r.get('countryCode')
+            except Exception:
+                pass
+
+        # 5. 降级源 2: ipwho.is
+        if not country_code:
+            try:
+                url = 'https://ipwho.is/%s' % raw_ip
+                r = WebRequest().get(url=url, retry_time=1, timeout=2).json
+                if isinstance(r, dict):
+                    country_code = r.get('country_code')
+            except Exception:
+                pass
+
+        final_region = country_code if country_code else 'error'
+
+        if final_region != 'error':
+            if len(_REGION_CACHE) >= _CACHE_MAX_SIZE:
+                _REGION_CACHE.clear()
+            _REGION_CACHE[raw_ip] = final_region
+
+        return final_region
 
 
 class _ThreadChecker(Thread):
@@ -139,15 +200,16 @@ class _ThreadChecker(Thread):
                 self.proxy_handler.put(proxy)
 
 
-def Checker(tp, queue):
+def Checker(tp, queue, thread_num=20):
     """
     run Proxy ThreadChecker
     :param tp: raw/use
     :param queue: Proxy Queue
+    :param thread_num: 并发线程数量 (默认 20)
     :return:
     """
     thread_list = list()
-    for index in range(20):
+    for index in range(thread_num):
         thread_list.append(_ThreadChecker(tp, queue, "thread_%s" % str(index).zfill(2)))
 
     for thread in thread_list:

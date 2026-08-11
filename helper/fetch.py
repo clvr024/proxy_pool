@@ -15,6 +15,7 @@ __author__ = 'JHao'
 
 import os
 import sys
+import time
 import importlib
 from threading import Thread
 
@@ -91,6 +92,53 @@ def _discover_fetchers(exclude_list):
     return sorted(fetcher_classes, key=lambda c: c.name)
 
 
+class FetcherHealth(object):
+    """ 代理源健康度统计与自动熔断 (Circuit Breaker) """
+    _stats = {}
+    MAX_CONSECUTIVE_FAILURES = 3
+    COOLDOWN_SECONDS = 1800  # 30 分钟
+
+    @classmethod
+    def is_circuit_open(cls, fetcher_name):
+        stat = cls._stats.get(fetcher_name)
+        if not stat:
+            return False
+        until = stat.get("circuit_open_until", 0)
+        if until and time.time() < until:
+            return True
+        return False
+
+    @classmethod
+    def record_success(cls, fetcher_name):
+        stat = cls._stats.setdefault(fetcher_name, {
+            "fail_count": 0,
+            "success_count": 0,
+            "circuit_open_until": 0
+        })
+        stat["fail_count"] = 0
+        stat["success_count"] += 1
+        stat["circuit_open_until"] = 0
+
+    @classmethod
+    def record_failure(cls, fetcher_name):
+        stat = cls._stats.setdefault(fetcher_name, {
+            "fail_count": 0,
+            "success_count": 0,
+            "circuit_open_until": 0
+        })
+        stat["fail_count"] += 1
+        if stat["fail_count"] >= cls.MAX_CONSECUTIVE_FAILURES:
+            stat["circuit_open_until"] = time.time() + cls.COOLDOWN_SECONDS
+
+    @classmethod
+    def get_stats(cls):
+        return cls._stats
+
+    @classmethod
+    def reset(cls):
+        cls._stats.clear()
+
+
 class _ThreadFetcher(Thread):
 
     def __init__(self, fetcher_class, proxy_dict):
@@ -101,6 +149,9 @@ class _ThreadFetcher(Thread):
 
     def run(self):
         fetcher_name = self.fetcher_class.name
+        if FetcherHealth.is_circuit_open(fetcher_name):
+            self.log.warning("ProxyFetch - {func}: circuit open (cooldown), skipping".format(func=fetcher_name))
+            return
         self.log.info("ProxyFetch - {func}: start".format(func=fetcher_name))
         try:
             for proxy in self.fetcher_class().fetch():
@@ -111,9 +162,11 @@ class _ThreadFetcher(Thread):
                 else:
                     self.proxy_dict[proxy] = Proxy(
                         proxy, source=fetcher_name)
+            FetcherHealth.record_success(fetcher_name)
         except Exception as e:
             self.log.error("ProxyFetch - {func}: error".format(func=fetcher_name))
             self.log.error(str(e))
+            FetcherHealth.record_failure(fetcher_name)
 
 
 class Fetcher(object):

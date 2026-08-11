@@ -144,6 +144,9 @@ class TestDoValidator:
 class TestRegionGetter:
     """DoValidator.regionGetter 测试"""
 
+    def setup_method(self):
+        DoValidator.clearRegionCache()
+
     @patch("helper.check.WebRequest")
     def test_success_returns_country_code(self, mock_wr_cls):
         """正常返回 -> country_code"""
@@ -165,6 +168,27 @@ class TestRegionGetter:
         proxy = Proxy("1.2.3.4:8080")
         result = DoValidator.regionGetter(proxy)
         assert result == "error"
+
+    def test_private_ip_returns_int(self):
+        """内网/私有 IP -> 'INT'"""
+        proxy = Proxy("127.0.0.1:8080")
+        assert DoValidator.regionGetter(proxy) == "INT"
+        proxy2 = Proxy("10.0.0.1:8080")
+        assert DoValidator.regionGetter(proxy2) == "INT"
+
+    @patch("helper.check.WebRequest")
+    def test_fallback_sources(self, mock_wr_cls):
+        """主源失败后使用降级源"""
+        mock_wr = MagicMock()
+        mock_wr.get.side_effect = [
+            Exception("api.ip.sb failed"),
+            MagicMock(json={"countryCode": "US"})
+        ]
+        mock_wr_cls.return_value = mock_wr
+
+        proxy = Proxy("8.8.8.8:8080")
+        result = DoValidator.regionGetter(proxy)
+        assert result == "US"
 
 
 def _make_checker(work_type, proxy_handler, conf=None):

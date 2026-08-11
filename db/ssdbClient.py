@@ -50,17 +50,25 @@ class SsdbClient(object):
 
     def get(self, https):
         """
-        从hash中随机返回一个代理
+        根据延迟优先排序返回代理（若无延迟记录则随机选择）
         :return:
         """
+        items_dict = self.__conn.hgetall(self.name)
+        if not items_dict:
+            return None
+
+        parsed_items = [json.loads(x) for x in items_dict.values()]
         if https:
-            items_dict = self.__conn.hgetall(self.name)
-            proxies = list(filter(lambda x: json.loads(x).get("https"), items_dict.values()))
-            return choice(proxies) if proxies else None
+            parsed_items = [x for x in parsed_items if x.get("https")]
+            if not parsed_items:
+                return None
+
+        with_latency = [x for x in parsed_items if x.get("latency", 0) > 0]
+        if with_latency:
+            with_latency.sort(key=lambda x: x.get("latency", 0))
+            return json.dumps(with_latency[0], ensure_ascii=False)
         else:
-            proxies = self.__conn.hkeys(self.name)
-            proxy = choice(proxies) if proxies else None
-            return self.__conn.hget(self.name, proxy) if proxy else None
+            return json.dumps(choice(parsed_items), ensure_ascii=False)
 
     def put(self, proxy_obj):
         """

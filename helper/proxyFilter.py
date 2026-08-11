@@ -254,11 +254,15 @@ def select_proxy(proxies, username_filter):
         SESSION_CACHE[session_id] = (selected.proxy, now + options.get('ttl', SESSION_TTL))
         return selected
 
-    # 默认每次请求轮换选择 IP (防重复逻辑)
+    # 默认每次请求选择 IP (优先选择延迟最低的代理，防重复与低延迟结合)
     with ROTATION_LOCK:
         unseen = [p for p in candidates if p.proxy not in ROTATION_HISTORY]
         if unseen:
-            selected = random.choice(unseen)
+            with_lat = [p for p in unseen if p.latency > 0]
+            if with_lat:
+                selected = min(with_lat, key=lambda p: p.latency)
+            else:
+                selected = random.choice(unseen)
         else:
             hist_list = list(ROTATION_HISTORY)
             selected = min(candidates, key=lambda p: hist_list.index(p.proxy) if p.proxy in hist_list else -1)
