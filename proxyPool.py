@@ -13,7 +13,7 @@
 __author__ = 'JHao'
 
 import click
-from helper.launcher import startServer, startScheduler
+from helper.launcher import startServer, startScheduler, startMixedServer
 from setting import BANNER, VERSION
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -37,6 +37,13 @@ def server():
     """ 启动api服务 """
     click.echo(BANNER)
     startServer()
+
+
+@cli.command(name="mixed")
+def mixed():
+    """ 启动mixed混合代理服务 (HTTP & SOCKS5) """
+    click.echo(BANNER)
+    startMixedServer()
 
 
 @cli.command(name="fetcher")

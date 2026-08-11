@@ -21,6 +21,7 @@ class GoodipsFetcher(BaseFetcher):
 
     name = "goodips"
     url = "https://www.goodips.com/"
+    enabled = False
 
     def fetch(self):
         url = "https://www.goodips.com/"

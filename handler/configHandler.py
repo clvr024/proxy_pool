@@ -33,6 +33,25 @@ class ConfigHandler(withMetaclass(Singleton)):
         return os.environ.get("PORT", setting.PORT)
 
     @LazyProperty
+    def mixedHost(self):
+        return os.environ.get("MIXED_HOST", getattr(setting, 'MIXED_HOST', '0.0.0.0'))
+
+    @LazyProperty
+    def mixedPort(self):
+        return int(os.environ.get("MIXED_PORT", getattr(setting, 'MIXED_PORT', 5011)))
+
+    @LazyProperty
+    def mixedAuthKeys(self):
+        raw = os.environ.get("MIXED_AUTH_KEYS", getattr(setting, 'MIXED_AUTH_KEYS', []))
+        if isinstance(raw, str):
+            raw = [k.strip() for k in raw.split(",") if k.strip()]
+        elif isinstance(raw, (list, tuple, set)):
+            raw = [str(k).strip() for k in raw if str(k).strip()]
+        else:
+            raw = []
+        return set(raw)
+
+    @LazyProperty
     def dbConn(self):
         return os.getenv("DB_CONN", setting.DB_CONN)
 

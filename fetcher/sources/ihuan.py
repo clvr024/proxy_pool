@@ -24,7 +24,7 @@ class IhuanFetcher(BaseFetcher):
 
     name = "ihuan"
     url = "https://ip.ihuan.me/"
-    enabled = True
+    enabled = False
 
     def fetch(self):
         wb = WebRequest()

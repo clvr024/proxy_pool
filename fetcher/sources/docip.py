@@ -24,6 +24,7 @@ class DocipFetcher(BaseFetcher):
 
     name = "docip"
     url = "https://www.docip.net/"
+    enabled = False
 
     def fetch(self):
         r = WebRequest().get("https://www.docip.net/data/free.json", timeout=10)

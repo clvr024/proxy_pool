@@ -23,7 +23,8 @@ def clean_env():
     """测试前后清理可能设置的环境变量"""
     env_keys = ["DB_CONN", "PORT", "HOST", "TABLE_NAME", "HTTP_URL",
                 "HTTPS_URL", "VERIFY_TIMEOUT", "MAX_FAIL_COUNT",
-                "POOL_SIZE_MIN", "PROXY_REGION", "TIMEZONE"]
+                "POOL_SIZE_MIN", "PROXY_REGION", "TIMEZONE",
+                "MIXED_HOST", "MIXED_PORT", "MIXED_AUTH_KEYS"]
     saved = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
         os.environ.pop(k, None)
@@ -75,6 +76,15 @@ class TestConfigHandlerDefaults:
     def test_fetcher_exclude_is_list(self, conf):
         assert isinstance(conf.fetcherExclude, list)
 
+    def test_mixed_host_default(self, conf):
+        assert conf.mixedHost == getattr(setting, 'MIXED_HOST', '0.0.0.0')
+
+    def test_mixed_port_default(self, conf):
+        assert conf.mixedPort == getattr(setting, 'MIXED_PORT', 5011)
+
+    def test_mixed_auth_keys_default(self, conf):
+        assert isinstance(conf.mixedAuthKeys, set)
+
 
 class TestConfigHandlerEnvOverride:
 
@@ -97,3 +107,8 @@ class TestConfigHandlerEnvOverride:
         os.environ["MAX_FAIL_COUNT"] = "5"
         conf = ConfigHandler()
         assert conf.maxFailCount == 5
+
+    def test_mixed_auth_keys_override(self):
+        os.environ["MIXED_AUTH_KEYS"] = "key1, key2, key3"
+        conf = ConfigHandler()
+        assert conf.mixedAuthKeys == {"key1", "key2", "key3"}

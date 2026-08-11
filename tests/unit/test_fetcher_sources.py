@@ -70,6 +70,12 @@ class TestFetcherInterface(object):
         ("fetcher.sources.proxifly", "ProxiFlyFetcher"),
         ("fetcher.sources.daili66", "DaiLi66Fetcher"),
         ("fetcher.sources.roundproxies", "RoundProxiesFetcher"),
+        ("fetcher.sources.proxyscrape", "ProxyScrapeFetcher"),
+        ("fetcher.sources.thespeedx", "TheSpeedXFetcher"),
+        ("fetcher.sources.monosans", "MonosansFetcher"),
+        ("fetcher.sources.jetkai", "JetkaiFetcher"),
+        ("fetcher.sources.freeproxylist", "FreeProxyListFetcher"),
+        ("fetcher.sources.clarketm", "ClarketmFetcher"),
     ]
 
     def test_all_fetchers_have_name_url_enabled(self):
@@ -414,3 +420,70 @@ class TestRoundProxiesFetcher(object):
         mock_wr.return_value.get.return_value = _make_response(json_data=None)
         result = list(RoundProxiesFetcher().fetch())
         assert result == []
+
+
+class TestProxyScrapeFetcher(object):
+
+    @patch("fetcher.sources.proxyscrape.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.proxyscrape import ProxyScrapeFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128\n")
+        result = list(ProxyScrapeFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+
+
+class TestTheSpeedXFetcher(object):
+
+    @patch("fetcher.sources.thespeedx.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.thespeedx import TheSpeedXFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128\n")
+        result = list(TheSpeedXFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+
+
+class TestMonosansFetcher(object):
+
+    @patch("fetcher.sources.monosans.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.monosans import MonosansFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128\n")
+        result = list(MonosansFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+
+
+class TestJetkaiFetcher(object):
+
+    @patch("fetcher.sources.jetkai.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.jetkai import JetkaiFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128\n")
+        result = list(JetkaiFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+
+
+class TestFreeProxyListFetcher(object):
+
+    @patch("fetcher.sources.freeproxylist.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.freeproxylist import FreeProxyListFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128")
+        result = list(FreeProxyListFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+
+
+class TestClarketmFetcher(object):
+
+    @patch("fetcher.sources.clarketm.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.clarketm import ClarketmFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="1.2.3.4:8080 US-N\n5.6.7.8:3128 CN-S")
+        result = list(ClarketmFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "5.6.7.8:3128" in result
+

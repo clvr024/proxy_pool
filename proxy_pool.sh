@@ -60,7 +60,7 @@ cmd_start() {
         # 前台模式（容器环境）
         log_info "Starting in foreground mode..."
 
-        trap 'log_info "Shutting down..."; kill $SERVER_PID $SCHEDULER_PID 2>/dev/null; wait; rm -f "$PID_FILE"; exit 0' EXIT INT TERM
+        trap 'log_info "Shutting down..."; kill $SERVER_PID $SCHEDULER_PID $MIXED_PID 2>/dev/null; wait; rm -f "$PID_FILE"; exit 0' EXIT INT TERM
 
         $PYTHON proxyPool.py server &
         SERVER_PID=$!
@@ -68,10 +68,14 @@ cmd_start() {
         $PYTHON proxyPool.py schedule &
         SCHEDULER_PID=$!
 
+        $PYTHON proxyPool.py mixed &
+        MIXED_PID=$!
+
         echo "$SERVER_PID" >> "$PID_FILE"
         echo "$SCHEDULER_PID" >> "$PID_FILE"
+        echo "$MIXED_PID" >> "$PID_FILE"
 
-        log_info "Services started (PIDs: $SERVER_PID $SCHEDULER_PID)"
+        log_info "Services started (PIDs: $SERVER_PID $SCHEDULER_PID $MIXED_PID)"
         wait
     else
         # 后台模式（非容器环境）
@@ -83,8 +87,12 @@ cmd_start() {
         nohup $PYTHON proxyPool.py schedule > /dev/null 2>&1 &
         SCHEDULER_PID=$!
 
+        nohup $PYTHON proxyPool.py mixed > /dev/null 2>&1 &
+        MIXED_PID=$!
+
         echo "$SERVER_PID" >> "$PID_FILE"
         echo "$SCHEDULER_PID" >> "$PID_FILE"
+        echo "$MIXED_PID" >> "$PID_FILE"
 
         sleep 2
 
@@ -98,6 +106,10 @@ cmd_start() {
             log_error "Scheduler failed to start"
             failed=true
         fi
+        if ! is_running "$MIXED_PID"; then
+            log_error "Mixed server failed to start"
+            failed=true
+        fi
 
         if [ "$failed" = true ]; then
             cmd_stop
@@ -107,6 +119,7 @@ cmd_start() {
         log_info "Services started"
         log_info "  Server PID:    $SERVER_PID"
         log_info "  Scheduler PID: $SCHEDULER_PID"
+        log_info "  Mixed PID:     $MIXED_PID"
         log_info "Use '$0 stop' to stop, '$0 status' to check"
     fi
 }

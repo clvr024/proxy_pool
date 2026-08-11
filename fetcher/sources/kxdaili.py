@@ -21,6 +21,7 @@ class KxdailiFetcher(BaseFetcher):
 
     name = "kxdaili"
     url = "http://www.kxdaili.com/dailiip.html"
+    enabled = False
 
     def fetch(self):
         target_urls = [
@@ -29,10 +30,13 @@ class KxdailiFetcher(BaseFetcher):
         ]
         for url in target_urls:
             tree = WebRequest().get(url).tree
+            if tree is None:
+                continue
             for tr in tree.xpath("//table[@class='active']//tr")[1:]:
                 ip = "".join(tr.xpath('./td[1]/text()')).strip()
                 port = "".join(tr.xpath('./td[2]/text()')).strip()
-                yield "%s:%s" % (ip, port)
+                if ip and port:
+                    yield "%s:%s" % (ip, port)
 
 
 if __name__ == '__main__':

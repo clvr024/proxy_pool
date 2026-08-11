@@ -127,6 +127,23 @@ docker-compose up -d
 | /count | GET | 查看代理数量 |None|
 | /delete | GET | 删除代理  |`?proxy=host:ip`|
 
+* Mixed 混合代理服务器 (HTTP/HTTPS & SOCKS5)
+
+默认开启在 `127.0.0.1:5011`，支持作为原生 HTTP / SOCKS5 代理直接配置到爬虫或浏览器中使用：
+
+```bash
+# 基础代理使用（自动轮换 IP）
+curl -x "http://127.0.0.1:5011" https://httpbin.org/ip
+
+# SOCKS5 代理使用
+curl -x "socks5://127.0.0.1:5011" https://httpbin.org/ip
+
+# 按地区过滤 (US) + Session 粘性 (固定 IP)
+curl -x "http://us;session=sess01@127.0.0.1:5011" https://httpbin.org/ip
+```
+
+详见完整文档: [Mixed 混合代理服务器使用指南](docs/mixed_server.md)
+
 
 * 爬虫使用
 

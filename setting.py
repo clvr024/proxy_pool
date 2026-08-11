@@ -32,12 +32,21 @@ HOST = "0.0.0.0"
 
 PORT = 5010
 
+# ############### mixed proxy server config ###############
+MIXED_HOST = "0.0.0.0"
+
+MIXED_PORT = 5011
+
+# 密码/API Key 校验配置，非空列表时启用密码校验，如: ["secret123", "key_abc"]
+# 支持环境变量 MIXED_AUTH_KEYS="secret123,key_abc"
+MIXED_AUTH_KEYS = []
+
 # ############### database config ###################
 # db connection uri
 # example:
 #      Redis: redis://:password@ip:port/db
 #      Ssdb:  ssdb://:password@ip:port
-DB_CONN = 'redis://:pwdstring@127.0.0.1:6379/0'
+DB_CONN = 'redis://127.0.0.1:6379/0'
 
 # proxy table name
 TABLE_NAME = 'use_proxy'

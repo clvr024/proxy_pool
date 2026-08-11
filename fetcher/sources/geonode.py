@@ -24,6 +24,7 @@ class GeonodeFetcher(BaseFetcher):
 
     name = "geonode"
     url = "https://geonode.com/"
+    enabled = False
 
     def fetch(self):
         url = ("https://proxylist.geonode.com/api/proxy-list?"

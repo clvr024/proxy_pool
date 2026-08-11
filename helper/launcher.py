@@ -26,6 +26,12 @@ def startServer():
     runFlask()
 
 
+def startMixedServer():
+    __beforeStart()
+    from helper.mixedServer import run_mixed_server
+    run_mixed_server()
+
+
 def startScheduler():
     __beforeStart()
     from helper.scheduler import runScheduler

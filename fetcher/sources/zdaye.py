@@ -24,23 +24,36 @@ class ZdayeFetcher(BaseFetcher):
 
     name = "zdaye"
     url = "https://www.zdaye.com/dayProxy.html"
+    enabled = False
 
     def fetch(self):
         start_url = "https://www.zdaye.com/free/"
         html_tree = WebRequest().get(start_url, verify=False).tree
-        latest_page_time = html_tree.xpath(
-            "//span[@class='thread_time_info']/text()")[0].strip()
-        interval = datetime.now() - datetime.strptime(
-            latest_page_time, "%Y/%m/%d %H:%M:%S")
+        if html_tree is None:
+            return
+        time_info = html_tree.xpath("//span[@class='thread_time_info']/text()")
+        if not time_info:
+            return
+        latest_page_time = time_info[0].strip()
+        try:
+            interval = datetime.now() - datetime.strptime(
+                latest_page_time, "%Y/%m/%d %H:%M:%S")
+        except ValueError:
+            return
         if interval.total_seconds() < 300:
-            target_url = ("https://www.zdaye.com/"
-                          + html_tree.xpath("//h3[@class='thread_title']/a/@href")[0].strip())
+            titles = html_tree.xpath("//h3[@class='thread_title']/a/@href")
+            if not titles:
+                return
+            target_url = "https://www.zdaye.com/" + titles[0].strip()
             while target_url:
                 _tree = WebRequest().get(target_url, verify=False).tree
+                if _tree is None:
+                    break
                 for tr in _tree.xpath("//table//tr"):
                     ip = "".join(tr.xpath("./td[1]/text()")).strip()
                     port = "".join(tr.xpath("./td[2]/text()")).strip()
-                    yield "%s:%s" % (ip, port)
+                    if ip and port:
+                        yield "%s:%s" % (ip, port)
                 next_page = _tree.xpath(
                     "//div[@class='page']/a[@title='下一页']/@href")
                 target_url = ("https://www.zdaye.com/" + next_page[0].strip()
